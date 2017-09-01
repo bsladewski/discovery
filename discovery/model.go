@@ -27,7 +27,12 @@
 // distributed microservices.
 package discovery
 
-import "time"
+import (
+	"encoding/base64"
+	"fmt"
+	"os"
+	"time"
+)
 
 // Service holds information about a service as well as the last time the
 // service was renewed.
@@ -52,3 +57,14 @@ type Authenticator func(token string) bool
 
 // NullAuthenticator the authenticator that always returns true.
 func NullAuthenticator(token string) bool { return true }
+
+// NewBasicAuthenticator returns an authenticator that performs basic auth with
+// the supplied username and password.
+func NewBasicAuthenticator(username, password string) Authenticator {
+	cred := []byte(fmt.Sprintf("%s:%s", username, password))
+	encoder := base64.NewEncoder(base64.StdEncoding, os.Stdout)
+	encoder.Write(cred)
+	return func(token string) bool {
+		return token == string(cred)
+	}
+}
