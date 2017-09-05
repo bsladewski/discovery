@@ -52,7 +52,9 @@ func (client *Client) Discover(name string) (string, error) {
 	values.Add("name", name)
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "discover"))
 	uri.RawQuery = values.Encode()
-	resp, err := client.netClient.Get(uri.String())
+	req, err := http.NewRequest("GET", uri.String(), nil)
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +81,9 @@ func (client *Client) List(name string) ([]Service, error) {
 	values.Add("name", name)
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "list"))
 	uri.RawQuery = values.Encode()
-	resp, err := client.netClient.Get(uri.String())
+	req, err := http.NewRequest("GET", uri.String(), nil)
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
 	if err != nil {
 		return []Service{}, err
 	}
@@ -102,6 +106,26 @@ func (client *Client) List(name string) ([]Service, error) {
 	return services.Services, nil
 }
 
+// Ping pings the discovery service.
+func (client *Client) Ping() error {
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "ping"))
+	req, err := http.NewRequest("GET", uri.String(), nil)
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
+	return nil
+}
+
 // NewClient returns a discovery server client.
 func NewClient(host, token string, timeout time.Duration) (*Client, error) {
 	client := &Client{
@@ -111,7 +135,7 @@ func NewClient(host, token string, timeout time.Duration) (*Client, error) {
 	client.netClient = &http.Client{
 		Timeout: timeout,
 	}
-	_, err := client.List("")
+	err := client.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
 	}
@@ -147,7 +171,7 @@ func NewTLSClient(host, token, certFile string,
 			},
 		},
 	}
-	_, err = client.List("")
+	err = client.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
 	}

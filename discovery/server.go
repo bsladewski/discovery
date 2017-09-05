@@ -148,6 +148,14 @@ func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 	w.Write(raw)
 }
 
+// HandlePing returns status code 200 if request passes auth.
+func (server *Server) HandlePing(w http.ResponseWriter, r *http.Request) {
+	if !server.authenticator(r.Header.Get("Authorization")) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+}
+
 // Run registers the http endpoints and runs the servers. Returns error on exit.
 func (server *Server) Run() error {
 	if server.tls {
@@ -187,6 +195,7 @@ func NewServer(port int, authenticator Authenticator) *Server {
 	mux.HandleFunc("/deregister", server.HandleDeregister)
 	mux.HandleFunc("/discover", server.HandleDiscover)
 	mux.HandleFunc("/list", server.HandleList)
+	mux.HandleFunc("/ping", server.HandlePing)
 	addr := fmt.Sprintf("localhost:%d", server.port)
 	server.h = &http.Server{Addr: addr, Handler: mux}
 	return server

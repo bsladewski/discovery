@@ -27,6 +27,68 @@
 // distributed microservices.
 package discovery
 
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"time"
+)
+
 // RegistryClient an http client to the discovery service registry features.
 type RegistryClient struct {
+	host  string
+	token string
+
+	netClient *http.Client
+
+	service  Service
+	shutdown chan bool
+}
+
+// Register registers the service with the discovery service.
+func (client *RegistryClient) Register() error {
+	return nil
+}
+
+// Deregister deregisters the service with the discovery service. Terminates
+// auto register if enabled.
+func (client *RegistryClient) Deregister() error {
+	return nil
+}
+
+// Auto automatically registers the service with the discovery service on the
+// specified interval.
+func (client *RegistryClient) Auto(interval time.Duration) {
+
+}
+
+// Ping pings the discovery service.
+func (client *RegistryClient) Ping() error {
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "ping"))
+	req, err := http.NewRequest("GET", uri.String(), nil)
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
+	return nil
+}
+
+func NewRegistryClient(name, host, targetHost, targetToken string,
+	timeout time.Duration) (*RegistryClient, error) {
+	return nil, nil
+}
+
+func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
+	skipVerify bool, timeout time.Duration) (*RegistryClient, error) {
+	return nil, nil
 }
