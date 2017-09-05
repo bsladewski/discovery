@@ -43,7 +43,7 @@ type randomRegistry struct {
 }
 
 // indexOf gets the index of the specified service in the registry or -1.
-func (r randomRegistry) indexOf(target Service) int {
+func (r *randomRegistry) indexOf(target Service) int {
 	for i, service := range r.Services {
 		if service.Name == target.Name && service.Host == target.Host {
 			return i
@@ -54,7 +54,7 @@ func (r randomRegistry) indexOf(target Service) int {
 
 // getAll gets all active services of the specified name. Optionally includes
 // inactive services if inactive is true.
-func (r randomRegistry) getAll(name string, inactive bool) []Service {
+func (r *randomRegistry) getAll(name string, inactive bool) []Service {
 	var (
 		services []Service
 		stale    []Service
@@ -79,17 +79,18 @@ func (r randomRegistry) getAll(name string, inactive bool) []Service {
 	return services
 }
 
-func (r randomRegistry) Add(service Service) {
+func (r *randomRegistry) Add(service Service) {
 	r.mutex.Lock()
 	if idx := r.indexOf(service); idx >= 0 {
 		r.Services[idx].Added = time.Now()
 	} else {
+		service.Added = time.Now()
 		r.Services = append(r.Services, service)
 	}
 	r.mutex.Unlock()
 }
 
-func (r randomRegistry) Remove(service Service) {
+func (r *randomRegistry) Remove(service Service) {
 	r.mutex.Lock()
 	if idx := r.indexOf(service); idx >= 0 {
 		r.Services = append(r.Services[:idx], r.Services[idx+1:]...)
@@ -97,7 +98,7 @@ func (r randomRegistry) Remove(service Service) {
 	r.mutex.Unlock()
 }
 
-func (r randomRegistry) Get(name string) (Service, error) {
+func (r *randomRegistry) Get(name string) (Service, error) {
 	services := r.getAll(name, false)
 	if len(services) == 0 {
 		return Service{}, fmt.Errorf("so such service '%s'", name)
@@ -105,17 +106,17 @@ func (r randomRegistry) Get(name string) (Service, error) {
 	return services[rand.Intn(len(services))], nil
 }
 
-func (r randomRegistry) List(name string) []Service {
+func (r *randomRegistry) List(name string) []Service {
 	return r.getAll(name, true)
 }
 
-func (r randomRegistry) SetTimeout(timeout time.Duration) {
+func (r *randomRegistry) SetTimeout(timeout time.Duration) {
 	r.mutex.Lock()
 	r.Timeout = timeout
 	r.mutex.Unlock()
 }
 
-func (r randomRegistry) SetKeep(keep time.Duration) {
+func (r *randomRegistry) SetKeep(keep time.Duration) {
 	r.mutex.Lock()
 	r.Keep = keep
 	r.mutex.Unlock()
@@ -124,7 +125,7 @@ func (r randomRegistry) SetKeep(keep time.Duration) {
 // NewRandomRegistry creates a Registry that load balances by selecting a
 // random service when replicants exist.
 func NewRandomRegistry(timeout time.Duration, keep time.Duration) Registry {
-	return randomRegistry{
+	return &randomRegistry{
 		Services: make([]Service, 0),
 		Timeout:  timeout,
 		Keep:     keep,

@@ -28,6 +28,7 @@
 package discovery
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -43,6 +44,8 @@ type Server struct {
 	tls      bool
 	certFile string
 	keyFile  string
+
+	h *http.Server
 }
 
 // HandleRegister adds a service to or renews a service with the registry.
@@ -55,10 +58,13 @@ func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	var err error
 	service := Service{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&service)
-	if err != nil {
+	if r.Body != nil {
+		decoder := json.NewDecoder(r.Body)
+		err = decoder.Decode(&service)
+	}
+	if r.Body == nil || err != nil || service.Name == "" || service.Host == "" {
 		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
@@ -76,10 +82,13 @@ func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	var err error
 	service := Service{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&service)
-	if err != nil {
+	if r.Body != nil {
+		decoder := json.NewDecoder(r.Body)
+		err = decoder.Decode(&service)
+	}
+	if r.Body == nil || err != nil || service.Name == "" || service.Host == "" {
 		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
@@ -141,15 +150,10 @@ func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 
 // Run registers the http endpoints and runs the servers. Returns error on exit.
 func (server *Server) Run() error {
-	http.HandleFunc("/register", server.HandleRegister)
-	http.HandleFunc("/deregister", server.HandleDeregister)
-	http.HandleFunc("/discover", server.HandleDiscover)
-	http.HandleFunc("/list", server.HandleList)
-	addr := fmt.Sprintf("localhost:%d", server.port)
 	if server.tls {
-		return http.ListenAndServeTLS(addr, server.certFile, server.keyFile, nil)
+		return server.h.ListenAndServeTLS(server.certFile, server.keyFile)
 	}
-	return http.ListenAndServe(addr, nil)
+	return server.h.ListenAndServe()
 }
 
 // SetTimeout updates how long a service should be considered active.
@@ -162,14 +166,30 @@ func (server *Server) SetKeep(keep time.Duration) {
 	server.registry.SetKeep(keep)
 }
 
+// Shutdown terminates the server if it exists.
+func (server *Server) Shutdown(ctx context.Context) error {
+	if server.h != nil {
+		return server.h.Shutdown(ctx)
+	}
+	return fmt.Errorf("server is not running")
+}
+
 // NewServer returns a server on the specified port. Takes an authenticator that
 // defines how authentication is handled.
 func NewServer(port int, authenticator Authenticator) *Server {
-	return &Server{
+	server := &Server{
 		registry:      NewRandomRegistry(30*time.Minute, 24*time.Hour),
 		port:          port,
 		authenticator: authenticator,
 	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/register", server.HandleRegister)
+	mux.HandleFunc("/deregister", server.HandleDeregister)
+	mux.HandleFunc("/discover", server.HandleDiscover)
+	mux.HandleFunc("/list", server.HandleList)
+	addr := fmt.Sprintf("localhost:%d", server.port)
+	server.h = &http.Server{Addr: addr, Handler: mux}
+	return server
 }
 
 // NewTLSServer returns an encrypted server on the specified port. Takes and
@@ -177,12 +197,9 @@ func NewServer(port int, authenticator Authenticator) *Server {
 // to a certificate and key file.
 func NewTLSServer(port int, authenticator Authenticator, certFile,
 	keyFile string) *Server {
-	return &Server{
-		registry:      NewRandomRegistry(30*time.Minute, 24*time.Hour),
-		port:          port,
-		authenticator: authenticator,
-		tls:           true,
-		certFile:      certFile,
-		keyFile:       keyFile,
-	}
+	server := NewServer(port, authenticator)
+	server.tls = true
+	server.certFile = certFile
+	server.keyFile = keyFile
+	return server
 }

@@ -26,3 +26,240 @@
 // Package discovery implements a service registry for tracking the location of
 // distributed microservices.
 package discovery
+
+import (
+	"fmt"
+	"testing"
+	"time"
+)
+
+// generateTestRegistry generates a random registry with the specified services
+// and replicants for each service.
+func generateTestRegistry(serviceCount, replicantCount int) randomRegistry {
+	registry := NewRandomRegistry(12*time.Hour, 24*time.Hour).(*randomRegistry)
+	services := []Service{}
+	for i := 1; i <= serviceCount; i++ {
+		for j := 1; j <= replicantCount; j++ {
+			name := fmt.Sprintf("service%d", i)
+			host := fmt.Sprintf("host%d", j)
+			service := Service{Name: name, Host: host, Added: time.Now()}
+			services = append(services, service)
+		}
+	}
+	registry.Services = services
+	return *registry
+}
+
+// TestIndexOf tests the randomRegistry.indexOf function.
+func TestIndexOf(t *testing.T) {
+	registry := generateTestRegistry(5, 2)
+	table := []struct {
+		service  Service
+		expected int
+	}{
+		{service: Service{Name: "service3", Host: "host2"}, expected: 5},
+		{service: Service{Name: "serviceX", Host: "hostX"}, expected: -1},
+	}
+	for _, row := range table {
+		if idx := registry.indexOf(row.service); idx != row.expected {
+			t.Errorf("expected index: %d, got: %d; %v\n", row.expected, idx,
+				row)
+			return
+		}
+	}
+}
+
+// TestGetAll tests the randomRegistry.getAll function.
+func TestGetAll(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	for i, service := range registry.Services {
+		if i%5 == 0 {
+			service.Added = service.Added.Add(-13 * time.Hour)
+			registry.Services[i] = service
+		}
+	}
+	table := []struct {
+		name        string
+		inactive    bool
+		expectedLen int
+	}{
+		{name: "service1", expectedLen: 4},
+		{name: "service1", inactive: true, expectedLen: 5},
+		{name: "invalid", expectedLen: 0},
+		{name: "", expectedLen: 20},
+		{name: "", inactive: true, expectedLen: 25},
+	}
+	for _, row := range table {
+		services := registry.getAll(row.name, row.inactive)
+		if length := len(services); length != row.expectedLen {
+			t.Errorf("expected: %d, got: %d; %v\n", row.expectedLen, length,
+				row)
+			return
+		}
+	}
+}
+
+// TestStale test removing stale entries on randomRegistry.getAll call.
+func TestStale(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	for i, service := range registry.Services {
+		service.Added = service.Added.Add(-25 * time.Hour)
+		registry.Services[i] = service
+	}
+	services := registry.getAll("", true)
+	if length := len(services); length > 0 {
+		t.Errorf("expected empty list, got length: %d\n", length)
+		return
+	}
+	if length := len(registry.Services); length > 0 {
+		t.Errorf("expected empty registry, got length: %d\n", length)
+		return
+	}
+}
+
+// TestAdd tests the randomRegistry.Add function.
+func TestAdd(t *testing.T) {
+	registry := generateTestRegistry(0, 0)
+	table := []struct {
+		service     Service
+		expectedLen int
+		expectedIdx int
+	}{
+		{service: Service{Name: "service1", Host: "host1"}, expectedLen: 1,
+			expectedIdx: 0},
+		{service: Service{Name: "service1", Host: "host2"}, expectedLen: 2,
+			expectedIdx: 1},
+		{service: Service{Name: "service1", Host: "host1"}, expectedLen: 2,
+			expectedIdx: 0},
+		{service: Service{Name: "service2", Host: "host1"}, expectedLen: 3,
+			expectedIdx: 2},
+	}
+	for _, row := range table {
+		registry.Add(row.service)
+		if length := len(registry.Services); length != row.expectedLen {
+			t.Errorf("expected length: %d, got: %d; %v\n", row.expectedLen,
+				length, row)
+			return
+		}
+		if idx := registry.indexOf(row.service); idx != row.expectedIdx {
+			t.Errorf("expected index: %d, got: %d; %v\n", row.expectedIdx, idx,
+				row)
+			return
+		}
+	}
+}
+
+// TestRemove tests the randomRegistry.Remove function.
+func TestRemove(t *testing.T) {
+	registry := generateTestRegistry(1, 5)
+	table := []struct {
+		service     Service
+		expectedLen int
+	}{
+		{service: Service{Name: "invalid", Host: "invalid"}, expectedLen: 5},
+		{service: Service{Name: "service1", Host: "host3"}, expectedLen: 4},
+		{service: Service{Name: "service1", Host: "host3"}, expectedLen: 4},
+	}
+	for _, row := range table {
+		registry.Remove(row.service)
+		if length := len(registry.Services); length != row.expectedLen {
+			t.Errorf("expected length: %d, got: %d; %v\n", row.expectedLen,
+				length, row)
+			return
+		}
+		if idx := registry.indexOf(row.service); idx != -1 {
+			t.Errorf("expected index: -1, got: %d; %v\n", idx, row)
+			return
+		}
+	}
+}
+
+// TestGet tests the randomRegistry.Get function.
+func TestGet(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	table := []struct {
+		name        string
+		expectedErr bool
+	}{
+		{name: "service3", expectedErr: false},
+		{name: "invalid", expectedErr: true},
+	}
+	for _, row := range table {
+		service, err := registry.Get(row.name)
+		if !row.expectedErr && service.Name != row.name {
+			t.Errorf("expected: %s, got: %s; %v\n", row.name, service.Name, row)
+			return
+		}
+		if row.expectedErr && err == nil {
+			t.Errorf("expected error, got nil; %v\n", row)
+			return
+		}
+	}
+}
+
+// TestList tests the randomRegistry.List function.
+func TestList(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	for i, service := range registry.Services {
+		if i%5 == 0 {
+			service.Added = service.Added.Add(-13 * time.Hour)
+			registry.Services[i] = service
+		}
+	}
+	table := []struct {
+		name        string
+		expectedLen int
+	}{
+		{name: "service1", expectedLen: 5},
+		{name: "invalid", expectedLen: 0},
+		{name: "", expectedLen: 25},
+	}
+	for _, row := range table {
+		services := registry.List(row.name)
+		if length := len(services); length != row.expectedLen {
+			t.Errorf("expected: %d, got: %d; %v\n", row.expectedLen, length,
+				row)
+			return
+		}
+	}
+}
+
+// TestSetTimeout tests the randomRegistry.SetTimeout function.
+func TestSetTimeout(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	for i, service := range registry.Services {
+		service.Added = service.Added.Add(-7 * time.Hour)
+		registry.Services[i] = service
+	}
+	services := registry.getAll("", false)
+	if length := len(services); length != 25 {
+		t.Errorf("failed to propagate registry, got length: %d\n", length)
+		return
+	}
+	registry.SetTimeout(6 * time.Hour)
+	services = registry.getAll("", false)
+	if length := len(services); length != 0 {
+		t.Errorf("expected empty list, got length: %d\n", length)
+		return
+	}
+}
+
+// TestSetKeep tests the randomRegistry.SetKeep function.
+func TestSetKeep(t *testing.T) {
+	registry := generateTestRegistry(5, 5)
+	for i, service := range registry.Services {
+		service.Added = service.Added.Add(-15 * time.Hour)
+		registry.Services[i] = service
+	}
+	registry.getAll("", false)
+	if length := len(registry.Services); length != 25 {
+		t.Errorf("failed to propagate registry, got length: %d\n", length)
+		return
+	}
+	registry.SetKeep(14 * time.Hour)
+	registry.getAll("", false)
+	if length := len(registry.Services); length != 0 {
+		t.Errorf("expected empty list, got length: %d\n", length)
+		return
+	}
+}

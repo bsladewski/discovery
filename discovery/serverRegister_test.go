@@ -28,21 +28,60 @@
 package discovery
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-// TestHandleDiscover400 tests the discover endpoint with a bad request.
-func TestHandleDiscover400(t *testing.T) {
-	server := NewServer(78780, NullAuthenticator)
-	req, err := http.NewRequest("GET", "/discover", nil)
+// TestHandleRegister405 tests the register endpoint with a bad method.
+func TestHandleRegister405(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	req, err := http.NewRequest("GET", "/register", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.HandleRegister)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
+		return
+	}
+}
+
+// TestHandleRegister401 tests the register endpoint with bad auth.
+func TestHandleRegister401(t *testing.T) {
+	auth := func(token string) bool {
+		return false
+	}
+	server := NewServer(64646, auth)
+	req, err := http.NewRequest("POST", "/register", nil)
+	if err != nil {
+		t.Errorf("failed to create mock request: %s", err.Error())
+		return
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(server.HandleRegister)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusUnauthorized {
+		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
+		return
+	}
+}
+
+// TestHandleRegister400 tests the register endpoint with a bad request.
+func TestHandleRegister400(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	req, err := http.NewRequest("POST", "/register", nil)
+	if err != nil {
+		t.Errorf("failed to create mock request: %s", err.Error())
+		return
+	}
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(server.HandleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("expected: %v, got: %v", http.StatusBadRequest, status)
@@ -50,43 +89,29 @@ func TestHandleDiscover400(t *testing.T) {
 	}
 }
 
-// TestHandleDiscover404 tests the discover endpoint with a nonexistant service.
-func TestHandleDiscover404(t *testing.T) {
-	server := NewServer(78780, NullAuthenticator)
-	req, err := http.NewRequest("GET", "/discover", nil)
-	query := req.URL.Query()
-	query.Add("name", "nonexistant")
-	req.URL.RawQuery = query.Encode()
+// TestHandleRegister200 tests the register endpoint.
+func TestHandleRegister200(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	service := Service{Name: "service1", Host: "host1"}
+	raw, err := json.Marshal(service)
+	if err != nil {
+		t.Errorf("failed to create request body: %s", err.Error())
+		return
+	}
+	req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(raw))
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
-	handler.ServeHTTP(rr, req)
-	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("expected: %v, got: %v", http.StatusNotFound, status)
-		return
-	}
-}
-
-// TestHandleDiscover200 tests the discover endpoint. TODO: Registry add not visible.
-func TestHandleDiscover200(t *testing.T) {
-	server := NewServer(78780, NullAuthenticator)
-	server.registry.Add(Service{Name: "test_service", Host: "localhost:78781"})
-	req, err := http.NewRequest("GET", "/discover", nil)
-	query := req.URL.Query()
-	query.Add("name", "test_service")
-	req.URL.RawQuery = query.Encode()
-	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
-	}
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.HandleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("expected: %v, got: %v", http.StatusOK, status)
+		return
+	}
+	if _, err := server.registry.Get(service.Name); err != nil {
+		t.Errorf("failed to retrieve registered service: %s", err.Error())
 		return
 	}
 }

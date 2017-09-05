@@ -26,3 +26,7 @@
 // Package discovery implements a service registry for tracking the location of
 // distributed microservices.
 package discovery
+
+// RegistryClient an http client to the discovery service registry features.
+type RegistryClient struct {
+}

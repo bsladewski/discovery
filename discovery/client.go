@@ -35,7 +35,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"time"
 )
 
@@ -51,7 +50,7 @@ type Client struct {
 func (client *Client) Discover(name string) (string, error) {
 	values := url.Values{}
 	values.Add("name", name)
-	uri, _ := url.Parse(path.Join(client.host, "discover"))
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "discover"))
 	uri.RawQuery = values.Encode()
 	resp, err := client.netClient.Get(uri.String())
 	if err != nil {
@@ -78,7 +77,7 @@ func (client *Client) Discover(name string) (string, error) {
 func (client *Client) List(name string) ([]Service, error) {
 	values := url.Values{}
 	values.Add("name", name)
-	uri, _ := url.Parse(client.host)
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "list"))
 	uri.RawQuery = values.Encode()
 	resp, err := client.netClient.Get(uri.String())
 	if err != nil {
