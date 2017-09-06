@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/bsladewski/discovery.svg?branch=master)](https://travis-ci.org/bsladewski/discovery)
 [![Coverage Status](https://coveralls.io/repos/github/bsladewski/discovery/badge.svg?branch=master)](https://coveralls.io/github/bsladewski/discovery?branch=master)
+[![](http://goreportcard.com/badge/bsladewski/discovery)](http://goreportcard.com/report/bsladewski/discovery)
 
 # discovery
 
