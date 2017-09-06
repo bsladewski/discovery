@@ -37,7 +37,7 @@ import (
 
 // TestHandleRegister405 tests the register endpoint with a bad method.
 func TestHandleRegister405(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/register", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -57,7 +57,7 @@ func TestHandleRegister401(t *testing.T) {
 	auth := func(token string) bool {
 		return false
 	}
-	server := NewServer(64646, auth)
+	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("POST", "/register", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -74,7 +74,7 @@ func TestHandleRegister401(t *testing.T) {
 
 // TestHandleRegister400 tests the register endpoint with a bad request.
 func TestHandleRegister400(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/register", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -91,7 +91,7 @@ func TestHandleRegister400(t *testing.T) {
 
 // TestHandleRegister200 tests the register endpoint.
 func TestHandleRegister200(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	service := Service{Name: "service1", Host: "host1"}
 	raw, err := json.Marshal(service)
 	if err != nil {

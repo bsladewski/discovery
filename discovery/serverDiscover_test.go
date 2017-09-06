@@ -35,7 +35,7 @@ import (
 
 // TestHandleDiscover405 tests the discover endpoint with a bad method.
 func TestHandleDiscover405(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/discover", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -55,7 +55,7 @@ func TestHandleDiscover401(t *testing.T) {
 	auth := func(token string) bool {
 		return false
 	}
-	server := NewServer(64646, auth)
+	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -72,7 +72,7 @@ func TestHandleDiscover401(t *testing.T) {
 
 // TestHandleDiscover400 tests the discover endpoint with a bad request.
 func TestHandleDiscover400(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -89,7 +89,7 @@ func TestHandleDiscover400(t *testing.T) {
 
 // TestHandleDiscover404 tests the discover endpoint with a nonexistant service.
 func TestHandleDiscover404(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	query := req.URL.Query()
 	query.Add("name", "nonexistant")
@@ -109,7 +109,7 @@ func TestHandleDiscover404(t *testing.T) {
 
 // TestHandleDiscover200 tests the discover endpoint.
 func TestHandleDiscover200(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	server.registry.Add(Service{Name: "test_service", Host: "localhost:78781"})
 	req, err := http.NewRequest("GET", "/discover", nil)
 	query := req.URL.Query()

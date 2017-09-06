@@ -37,7 +37,7 @@ import (
 
 // TestHandleDeregister405 tests the deregister endpoint with a bad method.
 func TestHandleDeregister405(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/deregister", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -57,7 +57,7 @@ func TestHandleDeregister401(t *testing.T) {
 	auth := func(token string) bool {
 		return false
 	}
-	server := NewServer(64646, auth)
+	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("DELETE", "/deregister", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -74,7 +74,7 @@ func TestHandleDeregister401(t *testing.T) {
 
 // TestHandleDeregister400 tests the deregister endpoint with a bad request.
 func TestHandleDeregister400(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("DELETE", "/deregister", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -91,7 +91,7 @@ func TestHandleDeregister400(t *testing.T) {
 
 // TestHandleDeregister200 tests the deregister endpoint.
 func TestHandleDeregister200(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	service := Service{Name: "service1", Host: "host1"}
 	server.registry.Add(service)
 	raw, err := json.Marshal(service)

@@ -36,7 +36,7 @@ import (
 // TestClientRegister tests calling the register endpoint with a registry
 // client.
 func TestClientRegister(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	go server.Run()
 	ctx := context.Background()
 	defer server.Shutdown(ctx)
@@ -66,7 +66,7 @@ func TestClientRegister(t *testing.T) {
 // TestClientDeregister tests calling the deregister endpoint with a registry
 // client.
 func TestClientDeregister(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	server.registry.Add(Service{Name: "service", Host: "hostName"})
 	go server.Run()
 	ctx := context.Background()
@@ -91,7 +91,7 @@ func TestClientDeregister(t *testing.T) {
 
 // TestClientAuto tests automatic registration with a registry client.
 func TestClientAuto(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	go server.Run()
 	ctx := context.Background()
 	defer server.Shutdown(ctx)

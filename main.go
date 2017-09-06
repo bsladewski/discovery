@@ -51,9 +51,9 @@ func main() {
 	}
 	var server *discovery.Server
 	if *certPtr != "" {
-		server = discovery.NewTLSServer(*portPtr, auth, *certPtr, *keyPtr)
+		server = discovery.NewTLSRandomServer(*portPtr, auth, *certPtr, *keyPtr)
 	} else {
-		server = discovery.NewServer(*portPtr, auth)
+		server = discovery.NewRandomServer(*portPtr, auth)
 	}
 	err := server.Run()
 	log.Printf("stopping service on port %d: %s\n", *portPtr, err.Error())

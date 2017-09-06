@@ -1,6 +1,7 @@
 # discovery
 
-Package discovery implements a service registry for tracking the location of distributed microservices.
+Package discovery implements a service registry for tracking the location of
+distributed microservices.
 
 ## Installation
 
@@ -31,19 +32,27 @@ This starts a discovery service on default port 80.
 ## Examples
 
 The following examples show how to use the discovery package in client code.
-The server and client types also provide constructors for using TLS, these
-types are used in the same way but take paths to key and/or certificate files
-on construction.
+The server and client types also provide constructors for using TLS. A server
+or client constructed using TLS is used in the same way.
 
 ### Server
 
 ```go
-server := discovery.NewServer(port, auth)
+server := discovery.NewRandomServer(port, auth)
 err := server.Run()
 ```
 
-- `port` an integer port number.
+- `port` a port number.
 - `auth` an instance of the `Authenticator` type.
+
+By default, the server will consider a service active for one minute without
+renewal and keep the service in the registry for twelve hours. To change this
+use the `SetTimeout` and `SetKeep` functions:
+
+```go
+server.SetTimeout(time.Hour)
+server.SetKeep(24*time.Hour)
+```
 
 The `Server` type also provides a `Shutdown` function for concurrent use:
 
@@ -59,7 +68,7 @@ err := server.Shutdown(ctx)
 ### Authenticator
 
 An `Authenticator` is passed into the constructor for a `Server` to define how
-http authentication should be used.
+http authentication should be handled.
 
 To disable http authentication use `discovery.NullAuthenticator`.
 
@@ -123,6 +132,10 @@ To register the service with the registry:
 err := registryClient.Register()
 ```
 
+`Register`, however, is typically not called directly. The intended use of the
+`RegistryClient` is to call `Auto` on service start, and `Deregister` on service
+termination.
+
 For automatic registration on an interval use:
 
 ```go
@@ -167,4 +180,8 @@ type Registry interface {
 
 A `Registry` backs the discovery service. The implementation included with the
 discovery package is the `RandomRegistry` that load balances by choosing a
-random replicant where more than one exists.
+random replicant where more than one exists. The `RandomRegistry` is used when
+calling `NewRandomServer`.
+
+To use a custom load balancing algorithm an alternative implementation for
+`Registry` can be used to construct a `Server` through the `NewServer` function.

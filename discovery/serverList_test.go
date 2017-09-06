@@ -38,7 +38,7 @@ import (
 
 // TestHandleList405 tests the list endpoint with a bad method.
 func TestHandleList405(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/list", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -58,7 +58,7 @@ func TestHandleList401(t *testing.T) {
 	auth := func(token string) bool {
 		return false
 	}
-	server := NewServer(64646, auth)
+	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("GET", "/list", nil)
 	if err != nil {
 		t.Errorf("failed to create mock request: %s", err.Error())
@@ -75,7 +75,7 @@ func TestHandleList401(t *testing.T) {
 
 // TestHandleList200 tests the list endpoint.
 func TestHandleList200(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	for i := 1; i <= 5; i++ {
 		for j := 1; j <= 5; j++ {
 			name := fmt.Sprintf("service%d", i)

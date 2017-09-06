@@ -36,7 +36,7 @@ import (
 
 // TestClientDiscover tests calling the discovery endpoint with a client.
 func TestClientDiscover(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	server.registry.Add(Service{Name: "service", Host: "hostName"})
 	go server.Run()
 	ctx := context.Background()
@@ -59,7 +59,7 @@ func TestClientDiscover(t *testing.T) {
 
 // TestClientDiscover tests calling the list endpoint with a client.
 func TestClientList(t *testing.T) {
-	server := NewServer(64646, NullAuthenticator)
+	server := NewRandomServer(64646, NullAuthenticator)
 	for i := 1; i <= 5; i++ {
 		server.registry.Add(Service{
 			Name: "service",

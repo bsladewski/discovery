@@ -197,11 +197,11 @@ func (server *Server) Shutdown(ctx context.Context) error {
 	return fmt.Errorf("server is not running")
 }
 
-// NewServer returns a server on the specified port. Takes an authenticator that
-// defines how authentication is handled.
-func NewServer(port int, authenticator Authenticator) *Server {
+// NewServer returns a server with the specified parameters.
+func NewServer(port int, authenticator Authenticator,
+	registry Registry) *Server {
 	server := &Server{
-		registry:      NewRandomRegistry(30*time.Minute, 24*time.Hour),
+		registry:      registry,
 		port:          port,
 		authenticator: authenticator,
 	}
@@ -216,14 +216,25 @@ func NewServer(port int, authenticator Authenticator) *Server {
 	return server
 }
 
-// NewTLSServer returns an encrypted server on the specified port. Takes and
-// authenticator that defines how authentication is handled as well as the paths
-// to a certificate and key file.
+// NewRandomServer returns a server backed by a RandomRegistry.
+func NewRandomServer(port int, authenticator Authenticator) *Server {
+	return NewServer(port, authenticator,
+		NewRandomRegistry(time.Minute, 12*time.Hour))
+}
+
+// NewTLSServer returns an encrypted server with the specified parameters.
 func NewTLSServer(port int, authenticator Authenticator, certFile,
-	keyFile string) *Server {
-	server := NewServer(port, authenticator)
+	keyFile string, registry Registry) *Server {
+	server := NewServer(port, authenticator, registry)
 	server.tls = true
 	server.certFile = certFile
 	server.keyFile = keyFile
 	return server
+}
+
+// NewTLSRandomServer returns an encrypted server backed by a RandomRegistry.
+func NewTLSRandomServer(port int, authenticator Authenticator, certFile,
+	keyFile string) *Server {
+	return NewTLSServer(port, authenticator, certFile, keyFile,
+		NewRandomRegistry(time.Minute, 12*time.Hour))
 }
