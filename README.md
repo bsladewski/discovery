@@ -72,7 +72,7 @@ http authentication should be handled.
 
 To disable http authentication use `discovery.NullAuthenticator`.
 
-To construct an `Authenticator` using Basic Auth with use:
+To construct an `Authenticator` that performs Basic Auth use:
 
 ```go
 auth := discovery.NewBasicAuthenticator(user, pass)
@@ -163,7 +163,7 @@ type Service struct {
 ```
 
 Information about a service is stored in the `Service` type. This type is used
-internally by a service registry and a list of `Services` is returned by the
+internally by a service registry and a list of type `Service` is returned by the
 client `List` function.
 
 ```go
@@ -180,8 +180,8 @@ type Registry interface {
 
 A `Registry` backs the discovery service. The implementation included with the
 discovery package is the `RandomRegistry` that load balances by choosing a
-random replicant where more than one exists. The `RandomRegistry` is used when
-calling `NewRandomServer`.
+random replicant where more than one exists. The `RandomRegistry` is used by
+`NewRandomServer`.
 
 To use a custom load balancing algorithm an alternative implementation for
 `Registry` can be used to construct a `Server` through the `NewServer` function.
