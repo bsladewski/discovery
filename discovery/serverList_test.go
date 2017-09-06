@@ -45,7 +45,7 @@ func TestHandleList405(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleList)
+	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
 		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
@@ -65,7 +65,7 @@ func TestHandleList401(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleList)
+	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
 		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
@@ -92,7 +92,7 @@ func TestHandleList200(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleList)
+	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("expected: %v, got: %v", http.StatusOK, status)

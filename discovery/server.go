@@ -49,8 +49,8 @@ type Server struct {
 	h *http.Server
 }
 
-// HandleRegister adds a service to or renews a service with the registry.
-func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
+// handleRegister adds a service to or renews a service with the registry.
+func (server *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
@@ -76,8 +76,8 @@ func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	server.registry.Add(service)
 }
 
-// HandleDeregister removes a service from the registry.
-func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
+// handleDeregister removes a service from the registry.
+func (server *Server) handleDeregister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "DELETE" {
 		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
@@ -103,8 +103,8 @@ func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
 	server.registry.Remove(service)
 }
 
-// HandleDiscover gets a service from the registry.
-func (server *Server) HandleDiscover(w http.ResponseWriter, r *http.Request) {
+// handleDiscover gets a service from the registry.
+func (server *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
@@ -136,8 +136,8 @@ func (server *Server) HandleDiscover(w http.ResponseWriter, r *http.Request) {
 	w.Write(raw)
 }
 
-// HandleList lists all services registered with the registry.
-func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
+// handleList lists all services registered with the registry.
+func (server *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
@@ -162,8 +162,8 @@ func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 	w.Write(raw)
 }
 
-// HandlePing returns status code 200 if request passes auth.
-func (server *Server) HandlePing(w http.ResponseWriter, r *http.Request) {
+// handlePing returns status code 200 if request passes auth.
+func (server *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 	if !server.authenticator(r.Header.Get("Authorization")) {
 		log.Printf("unauthorized ping request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -206,11 +206,11 @@ func NewServer(port int, authenticator Authenticator) *Server {
 		authenticator: authenticator,
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/register", server.HandleRegister)
-	mux.HandleFunc("/deregister", server.HandleDeregister)
-	mux.HandleFunc("/discover", server.HandleDiscover)
-	mux.HandleFunc("/list", server.HandleList)
-	mux.HandleFunc("/ping", server.HandlePing)
+	mux.HandleFunc("/register", server.handleRegister)
+	mux.HandleFunc("/deregister", server.handleDeregister)
+	mux.HandleFunc("/discover", server.handleDiscover)
+	mux.HandleFunc("/list", server.handleList)
+	mux.HandleFunc("/ping", server.handlePing)
 	addr := fmt.Sprintf("localhost:%d", server.port)
 	server.h = &http.Server{Addr: addr, Handler: mux}
 	return server

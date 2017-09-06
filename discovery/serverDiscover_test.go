@@ -42,7 +42,7 @@ func TestHandleDiscover405(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
 		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
@@ -62,7 +62,7 @@ func TestHandleDiscover401(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
 		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
@@ -79,7 +79,7 @@ func TestHandleDiscover400(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("expected: %v, got: %v", http.StatusBadRequest, status)
@@ -99,7 +99,7 @@ func TestHandleDiscover404(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusNotFound {
 		t.Errorf("expected: %v, got: %v", http.StatusNotFound, status)
@@ -120,7 +120,7 @@ func TestHandleDiscover200(t *testing.T) {
 		return
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(server.HandleDiscover)
+	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("expected: %v, got: %v", http.StatusOK, status)

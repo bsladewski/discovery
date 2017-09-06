@@ -102,7 +102,7 @@ func TestClientAuto(t *testing.T) {
 		return
 	}
 	client.Auto(10 * time.Millisecond)
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	service, err := server.registry.Get("service")
 	if err != nil {
 		t.Errorf("failed to get registered service: %s", err.Error())
@@ -118,13 +118,13 @@ func TestClientAuto(t *testing.T) {
 		t.Errorf("failed to register service: %s", err.Error())
 		return
 	}
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	_, err = server.registry.Get("service")
 	if err == nil {
 		t.Errorf("expected error not encountered")
 		return
 	}
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	if client.running {
 		t.Errorf("client still running")
 		return
