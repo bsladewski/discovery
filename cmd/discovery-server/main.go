@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/bsladewski/discovery/discovery"
+	"github.com/bsladewski/discovery"
 )
 
 // main Starts a discovery server as specified on the command line.
