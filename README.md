@@ -1,3 +1,5 @@
+![Build Status](https://travis-ci.org/bsladewski/discovery.svg?branch=master)
+
 # discovery
 
 Package discovery implements a service registry for tracking the location of
