@@ -31,6 +31,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -51,10 +52,12 @@ type Server struct {
 // HandleRegister adds a service to or renews a service with the registry.
 func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
+		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 	if !server.authenticator(r.Header.Get("Authentication")) {
+		log.Printf("unauthorized register request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -65,6 +68,7 @@ func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&service)
 	}
 	if r.Body == nil || err != nil || service.Name == "" || service.Host == "" {
+		log.Printf("bad request body from: %s\n", r.Host)
 		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
@@ -75,10 +79,12 @@ func (server *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 // HandleDeregister removes a service from the registry.
 func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "DELETE" {
+		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 	if !server.authenticator(r.Header.Get("Authentication")) {
+		log.Printf("unauthorized deregister request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -89,6 +95,7 @@ func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
 		err = decoder.Decode(&service)
 	}
 	if r.Body == nil || err != nil || service.Name == "" || service.Host == "" {
+		log.Printf("bad request body from: %s\n", r.Host)
 		http.Error(w, "failed to read request body", http.StatusBadRequest)
 		return
 	}
@@ -99,15 +106,18 @@ func (server *Server) HandleDeregister(w http.ResponseWriter, r *http.Request) {
 // HandleDiscover gets a service from the registry.
 func (server *Server) HandleDiscover(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
+		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 	if !server.authenticator(r.Header.Get("Authentication")) {
+		log.Printf("unauthorized discover request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	name := r.URL.Query().Get("name")
 	if name == "" {
+		log.Printf("bad request query from: %s\n", r.Host)
 		http.Error(w, "no service name provided", http.StatusBadRequest)
 		return
 	}
@@ -118,6 +128,7 @@ func (server *Server) HandleDiscover(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, err := json.Marshal(service)
 	if err != nil {
+		log.Printf("error writing service to JSON: %s\n", err.Error())
 		http.Error(w, "failed to write service", http.StatusInternalServerError)
 		return
 	}
@@ -128,10 +139,12 @@ func (server *Server) HandleDiscover(w http.ResponseWriter, r *http.Request) {
 // HandleList lists all services registered with the registry.
 func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
+		log.Printf("invalid request method from: %s\n", r.Host)
 		http.Error(w, "method not supported", http.StatusMethodNotAllowed)
 		return
 	}
 	if !server.authenticator(r.Header.Get("Authorization")) {
+		log.Printf("unauthorized list request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -141,6 +154,7 @@ func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 	resp.Services = server.registry.List(r.URL.Query().Get("name"))
 	raw, err := json.Marshal(resp)
 	if err != nil {
+		log.Printf("error writing services to JSON: %s\n", err.Error())
 		http.Error(w, "failed to write services", http.StatusInternalServerError)
 		return
 	}
@@ -151,6 +165,7 @@ func (server *Server) HandleList(w http.ResponseWriter, r *http.Request) {
 // HandlePing returns status code 200 if request passes auth.
 func (server *Server) HandlePing(w http.ResponseWriter, r *http.Request) {
 	if !server.authenticator(r.Header.Get("Authorization")) {
+		log.Printf("unauthorized ping request from: %s\n", r.Host)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}

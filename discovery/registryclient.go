@@ -28,6 +28,10 @@
 package discovery
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -43,24 +47,86 @@ type RegistryClient struct {
 	netClient *http.Client
 
 	service  Service
+	running  bool
 	shutdown chan bool
 }
 
 // Register registers the service with the discovery service.
 func (client *RegistryClient) Register() error {
+	raw, err := json.Marshal(client.service)
+	if err != nil {
+		return err
+	}
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "register"))
+	req, err := http.NewRequest("POST", uri.String(), bytes.NewBuffer(raw))
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
 	return nil
 }
 
-// Deregister deregisters the service with the discovery service. Terminates
-// auto register if enabled.
-func (client *RegistryClient) Deregister() error {
-	return nil
+// doAuto a concurrent function to perform the automatic registration.
+func (client *RegistryClient) doAuto(interval time.Duration) {
+	client.running = true
+	for {
+		select {
+		case <-client.shutdown:
+			client.running = false
+			return
+		default:
+			client.Register()
+			time.Sleep(interval)
+		}
+	}
 }
 
 // Auto automatically registers the service with the discovery service on the
 // specified interval.
 func (client *RegistryClient) Auto(interval time.Duration) {
+	if !client.running {
+		go client.doAuto(interval)
+	}
+}
 
+// Deregister deregisters the service with the discovery service. Terminates
+// auto register if enabled.
+func (client *RegistryClient) Deregister() error {
+	if client.running {
+		select {
+		case client.shutdown <- true:
+		default:
+		}
+	}
+	raw, err := json.Marshal(client.service)
+	if err != nil {
+		return err
+	}
+	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "deregister"))
+	req, err := http.NewRequest("DELETE", uri.String(), bytes.NewBuffer(raw))
+	req.Header.Set("Authorization", client.token)
+	resp, err := client.netClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf(string(body))
+	}
+	return nil
 }
 
 // Ping pings the discovery service.
@@ -83,12 +149,59 @@ func (client *RegistryClient) Ping() error {
 	return nil
 }
 
+// NewRegistryClient returns a discovery server registry client.
 func NewRegistryClient(name, host, targetHost, targetToken string,
 	timeout time.Duration) (*RegistryClient, error) {
-	return nil, nil
+	client := &RegistryClient{
+		host:     targetHost,
+		token:    targetToken,
+		service:  Service{Name: name, Host: host},
+		shutdown: make(chan bool, 1),
+	}
+	client.netClient = &http.Client{
+		Timeout: timeout,
+	}
+	err := client.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+	}
+	return client, nil
 }
 
+// NewTLSRegistryClient returns an encryped discovery server registry client.
 func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
 	skipVerify bool, timeout time.Duration) (*RegistryClient, error) {
-	return nil, nil
+	client := &RegistryClient{
+		host:     targetHost,
+		token:    targetToken,
+		service:  Service{Name: name, Host: host},
+		shutdown: make(chan bool, 1),
+	}
+	certs, err := x509.SystemCertPool()
+	if err != nil {
+		certs = x509.NewCertPool()
+	}
+	if certFile != "" {
+		pemData, err := ioutil.ReadFile(certFile)
+		if err != nil {
+			return nil, err
+		}
+		if !certs.AppendCertsFromPEM(pemData) {
+			return nil, fmt.Errorf("failed to load specified certificate")
+		}
+	}
+	client.netClient = &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: skipVerify,
+				RootCAs:            certs,
+			},
+		},
+	}
+	err = client.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+	}
+	return client, nil
 }

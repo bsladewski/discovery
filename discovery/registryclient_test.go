@@ -26,3 +26,107 @@
 // Package discovery implements a service registry for tracking the location of
 // distributed microservices.
 package discovery
+
+import (
+	"context"
+	"testing"
+	"time"
+)
+
+// TestClientRegister tests calling the register endpoint with a registry
+// client.
+func TestClientRegister(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	go server.Run()
+	ctx := context.Background()
+	defer server.Shutdown(ctx)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	err = client.Register()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+	service, err := server.registry.Get("service")
+	if err != nil {
+		t.Errorf("failed to get registered service: %s", err.Error())
+		return
+	}
+	if service.Host != client.service.Host ||
+		service.Name != client.service.Name {
+		t.Errorf("expected: %v, got: %v", client.service, service)
+		return
+	}
+}
+
+// TestClientDeregister tests calling the deregister endpoint with a registry
+// client.
+func TestClientDeregister(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	server.registry.Add(Service{Name: "service", Host: "hostName"})
+	go server.Run()
+	ctx := context.Background()
+	defer server.Shutdown(ctx)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	err = client.Deregister()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+	_, err = server.registry.Get("service")
+	if err == nil {
+		t.Errorf("expected error not encountered")
+		return
+	}
+}
+
+// TestClientAuto tests automatic registration with a registry client.
+func TestClientAuto(t *testing.T) {
+	server := NewServer(64646, NullAuthenticator)
+	go server.Run()
+	ctx := context.Background()
+	defer server.Shutdown(ctx)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	client.Auto(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
+	service, err := server.registry.Get("service")
+	if err != nil {
+		t.Errorf("failed to get registered service: %s", err.Error())
+		return
+	}
+	if service.Host != client.service.Host ||
+		service.Name != client.service.Name {
+		t.Errorf("expected: %v, got: %v", client.service, service)
+		return
+	}
+	err = client.Deregister()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+	time.Sleep(20 * time.Millisecond)
+	_, err = server.registry.Get("service")
+	if err == nil {
+		t.Errorf("expected error not encountered")
+		return
+	}
+	time.Sleep(20 * time.Millisecond)
+	if client.running {
+		t.Errorf("client still running")
+		return
+	}
+}
