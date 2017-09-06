@@ -10,4 +10,4 @@ script:
   - go test -v -cover -race -coverprofile=coverage.out
 after_script:
   - go get github.com/mattn/goveralls
-  - goveralls -coverprofile=coverage.out -service=travis-ci
+  - goveralls -coverprofile=coverage.out -service=travis-ci -repotoken='N9vUOJzZvo0r8CfQ1vkOJiK3Ahrkwv9YM'
