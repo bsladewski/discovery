@@ -125,7 +125,7 @@ func TestClientAuto(t *testing.T) {
 		return
 	}
 	time.Sleep(50 * time.Millisecond)
-	if client.running {
+	if client.IsRunning() {
 		t.Errorf("client still running")
 		return
 	}

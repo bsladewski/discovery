@@ -36,6 +36,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -47,6 +48,7 @@ type RegistryClient struct {
 	netClient *http.Client
 
 	service  Service
+	mutex    *sync.RWMutex
 	running  bool
 	shutdown chan bool
 }
@@ -75,13 +77,20 @@ func (client *RegistryClient) Register() error {
 	return nil
 }
 
+// setRunning thread-safe way of setting the running state of this client.
+func (client *RegistryClient) setRunning(running bool) {
+	client.mutex.Lock()
+	client.running = running
+	client.mutex.Unlock()
+}
+
 // doAuto a concurrent function to perform the automatic registration.
 func (client *RegistryClient) doAuto(interval time.Duration) {
-	client.running = true
+	client.setRunning(true)
 	for {
 		select {
 		case <-client.shutdown:
-			client.running = false
+			client.setRunning(false)
 			return
 		default:
 			client.Register()
@@ -93,15 +102,22 @@ func (client *RegistryClient) doAuto(interval time.Duration) {
 // Auto automatically registers the service with the discovery service on the
 // specified interval.
 func (client *RegistryClient) Auto(interval time.Duration) {
-	if !client.running {
+	if !client.IsRunning() {
 		go client.doAuto(interval)
 	}
+}
+
+// IsRunning returns whether automatic registration is currently running.
+func (client *RegistryClient) IsRunning() bool {
+	client.mutex.RLock()
+	defer client.mutex.RUnlock()
+	return client.running
 }
 
 // Deregister deregisters the service with the discovery service. Terminates
 // auto register if enabled.
 func (client *RegistryClient) Deregister() error {
-	if client.running {
+	if client.IsRunning() {
 		select {
 		case client.shutdown <- true:
 		default:
@@ -156,6 +172,7 @@ func NewRegistryClient(name, host, targetHost, targetToken string,
 		host:     targetHost,
 		token:    targetToken,
 		service:  Service{Name: name, Host: host},
+		mutex:    &sync.RWMutex{},
 		shutdown: make(chan bool, 1),
 	}
 	client.netClient = &http.Client{
@@ -175,6 +192,7 @@ func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
 		host:     targetHost,
 		token:    targetToken,
 		service:  Service{Name: name, Host: host},
+		mutex:    &sync.RWMutex{},
 		shutdown: make(chan bool, 1),
 	}
 	certs, err := x509.SystemCertPool()
