@@ -49,12 +49,12 @@ func main() {
 	if *userPtr != "" {
 		auth = discovery.NewBasicAuthenticator(*userPtr, *passPtr)
 	}
-	var server *discovery.Server
+	server := discovery.NewRandomServer(*portPtr, auth)
+	var err error
 	if *certPtr != "" {
-		server = discovery.NewTLSRandomServer(*portPtr, auth, *certPtr, *keyPtr)
+		err = server.ListenAndServe()
 	} else {
-		server = discovery.NewRandomServer(*portPtr, auth)
+		err = server.ListenAndServeTLS(*certPtr, *keyPtr)
 	}
-	err := server.Run()
 	log.Printf("stopping service on port %d: %s\n", *portPtr, err.Error())
 }

@@ -42,15 +42,28 @@ import (
 
 // RegistryClient an http client to the discovery service registry features.
 type RegistryClient struct {
+	http.Client
 	host  string
 	token string
-
-	netClient *http.Client
 
 	service  Service
 	mutex    *sync.RWMutex
 	running  bool
 	shutdown chan bool
+}
+
+// setRunning thread-safe way of setting the running state of this client.
+func (client *RegistryClient) setRunning(running bool) {
+	client.mutex.Lock()
+	client.running = running
+	client.mutex.Unlock()
+}
+
+// IsRunning thread-safe way to check the running state of this client.
+func (client *RegistryClient) IsRunning() bool {
+	client.mutex.RLock()
+	defer client.mutex.RUnlock()
+	return client.running
 }
 
 // Register registers the service with the discovery service.
@@ -62,7 +75,7 @@ func (client *RegistryClient) Register() error {
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "register"))
 	req, err := http.NewRequest("POST", uri.String(), bytes.NewBuffer(raw))
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -75,13 +88,6 @@ func (client *RegistryClient) Register() error {
 		return fmt.Errorf(string(body))
 	}
 	return nil
-}
-
-// setRunning thread-safe way of setting the running state of this client.
-func (client *RegistryClient) setRunning(running bool) {
-	client.mutex.Lock()
-	client.running = running
-	client.mutex.Unlock()
 }
 
 // doAuto a concurrent function to perform the automatic registration.
@@ -107,13 +113,6 @@ func (client *RegistryClient) Auto(interval time.Duration) {
 	}
 }
 
-// IsRunning returns whether automatic registration is currently running.
-func (client *RegistryClient) IsRunning() bool {
-	client.mutex.RLock()
-	defer client.mutex.RUnlock()
-	return client.running
-}
-
 // Deregister deregisters the service with the discovery service. Terminates
 // auto register if enabled.
 func (client *RegistryClient) Deregister() error {
@@ -130,7 +129,7 @@ func (client *RegistryClient) Deregister() error {
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "deregister"))
 	req, err := http.NewRequest("DELETE", uri.String(), bytes.NewBuffer(raw))
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -150,7 +149,7 @@ func (client *RegistryClient) Ping() error {
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "ping"))
 	req, err := http.NewRequest("GET", uri.String(), nil)
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -169,14 +168,15 @@ func (client *RegistryClient) Ping() error {
 func NewRegistryClient(name, host, targetHost, targetToken string,
 	timeout time.Duration) (*RegistryClient, error) {
 	client := &RegistryClient{
-		host:     targetHost,
-		token:    targetToken,
-		service:  Service{Name: name, Host: host},
-		mutex:    &sync.RWMutex{},
-		shutdown: make(chan bool, 1),
-	}
-	client.netClient = &http.Client{
-		Timeout: timeout,
+		http.Client{
+			Timeout: timeout,
+		},
+		targetHost,
+		targetToken,
+		Service{Name: name, Host: host},
+		&sync.RWMutex{},
+		false,
+		make(chan bool, 1),
 	}
 	err := client.Ping()
 	if err != nil {
@@ -188,13 +188,6 @@ func NewRegistryClient(name, host, targetHost, targetToken string,
 // NewTLSRegistryClient returns an encryped discovery server registry client.
 func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
 	skipVerify bool, timeout time.Duration) (*RegistryClient, error) {
-	client := &RegistryClient{
-		host:     targetHost,
-		token:    targetToken,
-		service:  Service{Name: name, Host: host},
-		mutex:    &sync.RWMutex{},
-		shutdown: make(chan bool, 1),
-	}
 	certs, err := x509.SystemCertPool()
 	if err != nil {
 		certs = x509.NewCertPool()
@@ -208,14 +201,22 @@ func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
 			return nil, fmt.Errorf("failed to load specified certificate")
 		}
 	}
-	client.netClient = &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: skipVerify,
-				RootCAs:            certs,
+	client := &RegistryClient{
+		http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: skipVerify,
+					RootCAs:            certs,
+				},
 			},
 		},
+		targetHost,
+		targetToken,
+		Service{Name: name, Host: host},
+		&sync.RWMutex{},
+		false,
+		make(chan bool, 1),
 	}
 	err = client.Ping()
 	if err != nil {

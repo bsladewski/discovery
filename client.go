@@ -40,10 +40,9 @@ import (
 
 // Client an http client to the discovery server.
 type Client struct {
+	http.Client
 	host  string
 	token string
-
-	netClient *http.Client
 }
 
 // Discover gets the host of the target service by name or an error.
@@ -54,7 +53,7 @@ func (client *Client) Discover(name string) (string, error) {
 	uri.RawQuery = values.Encode()
 	req, err := http.NewRequest("GET", uri.String(), nil)
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -83,7 +82,7 @@ func (client *Client) List(name string) ([]Service, error) {
 	uri.RawQuery = values.Encode()
 	req, err := http.NewRequest("GET", uri.String(), nil)
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return []Service{}, err
 	}
@@ -111,7 +110,7 @@ func (client *Client) Ping() error {
 	uri, _ := url.Parse(fmt.Sprintf("%s/%s", client.host, "ping"))
 	req, err := http.NewRequest("GET", uri.String(), nil)
 	req.Header.Set("Authorization", client.token)
-	resp, err := client.netClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -129,11 +128,11 @@ func (client *Client) Ping() error {
 // NewClient returns a discovery server client.
 func NewClient(host, token string, timeout time.Duration) (*Client, error) {
 	client := &Client{
-		host:  host,
-		token: token,
-	}
-	client.netClient = &http.Client{
-		Timeout: timeout,
+		http.Client{
+			Timeout: timeout,
+		},
+		host,
+		token,
 	}
 	err := client.Ping()
 	if err != nil {
@@ -145,10 +144,6 @@ func NewClient(host, token string, timeout time.Duration) (*Client, error) {
 // NewTLSClient returns an encrypted discovery server client.
 func NewTLSClient(host, token, certFile string,
 	skipVerify bool, timeout time.Duration) (*Client, error) {
-	client := &Client{
-		host:  host,
-		token: token,
-	}
 	certs, err := x509.SystemCertPool()
 	if err != nil {
 		certs = x509.NewCertPool()
@@ -162,14 +157,18 @@ func NewTLSClient(host, token, certFile string,
 			return nil, fmt.Errorf("failed to load specified certificate")
 		}
 	}
-	client.netClient = &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: skipVerify,
-				RootCAs:            certs,
+	client := &Client{
+		http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: skipVerify,
+					RootCAs:            certs,
+				},
 			},
 		},
+		host,
+		token,
 	}
 	err = client.Ping()
 	if err != nil {

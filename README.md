@@ -35,15 +35,11 @@ This starts a discovery service on default port 80.
 
 ## Examples
 
-The following examples show how to use the discovery package in client code.
-The server and client types also provide constructors for using TLS. A server
-or client constructed using TLS is used in the same way.
-
 ### Server
 
 ```go
 server := discovery.NewRandomServer(port, auth)
-err := server.Run()
+err := server.ListenAndServe()
 ```
 
 - `port` a port number.
@@ -56,17 +52,6 @@ use the `SetTimeout` and `SetKeep` functions:
 ```go
 server.SetTimeout(time.Hour)
 server.SetKeep(24*time.Hour)
-```
-
-The `Server` type also provides a `Shutdown` function for concurrent use:
-
-```go
-...
-go server.Run()
-...
-ctx, cancel := context.WithTimeout(context.Background, 5*time.Second)
-defer cancel()
-err := server.Shutdown(ctx)
 ```
 
 ### Authenticator

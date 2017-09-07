@@ -28,7 +28,6 @@
 package discovery
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -38,15 +37,9 @@ import (
 
 // Server represents an http interface to a service registry.
 type Server struct {
+	http.Server
 	registry      Registry
-	port          int
 	authenticator Authenticator
-
-	tls      bool
-	certFile string
-	keyFile  string
-
-	h *http.Server
 }
 
 // handleRegister adds a service to or renews a service with the registry.
@@ -171,14 +164,6 @@ func (server *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Run registers the http endpoints and runs the servers. Returns error on exit.
-func (server *Server) Run() error {
-	if server.tls {
-		return server.h.ListenAndServeTLS(server.certFile, server.keyFile)
-	}
-	return server.h.ListenAndServe()
-}
-
 // SetTimeout updates how long a service should be considered active.
 func (server *Server) SetTimeout(timeout time.Duration) {
 	server.registry.SetTimeout(timeout)
@@ -189,52 +174,25 @@ func (server *Server) SetKeep(keep time.Duration) {
 	server.registry.SetKeep(keep)
 }
 
-// Shutdown terminates the server if it exists.
-func (server *Server) Shutdown(ctx context.Context) error {
-	if server.h != nil {
-		return server.h.Shutdown(ctx)
-	}
-	return fmt.Errorf("server is not running")
-}
-
 // NewServer returns a server with the specified parameters.
 func NewServer(port int, authenticator Authenticator,
 	registry Registry) *Server {
-	server := &Server{
-		registry:      registry,
-		port:          port,
-		authenticator: authenticator,
-	}
 	mux := http.NewServeMux()
+	server := &Server{
+		http.Server{Addr: fmt.Sprintf("localhost:%d", port), Handler: mux},
+		registry,
+		authenticator,
+	}
 	mux.HandleFunc("/register", server.handleRegister)
 	mux.HandleFunc("/deregister", server.handleDeregister)
 	mux.HandleFunc("/discover", server.handleDiscover)
 	mux.HandleFunc("/list", server.handleList)
 	mux.HandleFunc("/ping", server.handlePing)
-	addr := fmt.Sprintf("localhost:%d", server.port)
-	server.h = &http.Server{Addr: addr, Handler: mux}
 	return server
 }
 
 // NewRandomServer returns a server backed by a RandomRegistry.
 func NewRandomServer(port int, authenticator Authenticator) *Server {
 	return NewServer(port, authenticator,
-		NewRandomRegistry(time.Minute, 12*time.Hour))
-}
-
-// NewTLSServer returns an encrypted server with the specified parameters.
-func NewTLSServer(port int, authenticator Authenticator, certFile,
-	keyFile string, registry Registry) *Server {
-	server := NewServer(port, authenticator, registry)
-	server.tls = true
-	server.certFile = certFile
-	server.keyFile = keyFile
-	return server
-}
-
-// NewTLSRandomServer returns an encrypted server backed by a RandomRegistry.
-func NewTLSRandomServer(port int, authenticator Authenticator, certFile,
-	keyFile string) *Server {
-	return NewTLSServer(port, authenticator, certFile, keyFile,
 		NewRandomRegistry(time.Minute, 12*time.Hour))
 }

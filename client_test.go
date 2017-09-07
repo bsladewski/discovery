@@ -36,12 +36,11 @@ import (
 
 // TestClientDiscover tests calling the discovery endpoint with a client.
 func TestClientDiscover(t *testing.T) {
-	server := NewRandomServer(64646, NullAuthenticator)
+	server := NewRandomServer(53535, NullAuthenticator)
 	server.registry.Add(Service{Name: "service", Host: "hostName"})
-	go server.Run()
-	ctx := context.Background()
-	defer server.Shutdown(ctx)
-	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return
@@ -59,17 +58,16 @@ func TestClientDiscover(t *testing.T) {
 
 // TestClientDiscover tests calling the list endpoint with a client.
 func TestClientList(t *testing.T) {
-	server := NewRandomServer(64646, NullAuthenticator)
+	server := NewRandomServer(53535, NullAuthenticator)
 	for i := 1; i <= 5; i++ {
 		server.registry.Add(Service{
 			Name: "service",
 			Host: fmt.Sprintf("hostName%d", i),
 		})
 	}
-	go server.Run()
-	ctx := context.Background()
-	defer server.Shutdown(ctx)
-	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
+	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return

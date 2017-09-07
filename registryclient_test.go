@@ -37,9 +37,8 @@ import (
 // client.
 func TestClientRegister(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
-	go server.Run()
-	ctx := context.Background()
-	defer server.Shutdown(ctx)
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
 	client, err := NewRegistryClient("service", "hostName",
 		"http://localhost:64646", "", 10*time.Second)
 	if err != nil {
@@ -68,9 +67,8 @@ func TestClientRegister(t *testing.T) {
 func TestClientDeregister(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	server.registry.Add(Service{Name: "service", Host: "hostName"})
-	go server.Run()
-	ctx := context.Background()
-	defer server.Shutdown(ctx)
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
 	client, err := NewRegistryClient("service", "hostName",
 		"http://localhost:64646", "", 10*time.Second)
 	if err != nil {
@@ -92,9 +90,8 @@ func TestClientDeregister(t *testing.T) {
 // TestClientAuto tests automatic registration with a registry client.
 func TestClientAuto(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
-	go server.Run()
-	ctx := context.Background()
-	defer server.Shutdown(ctx)
+	go server.ListenAndServe()
+	defer server.Shutdown(context.Background())
 	client, err := NewRegistryClient("service", "hostName",
 		"http://localhost:64646", "", 10*time.Second)
 	if err != nil {
