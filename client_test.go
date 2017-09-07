@@ -29,6 +29,9 @@ package discovery
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -36,14 +39,17 @@ import (
 
 // setupClientTest starts a test server and waits for it to be ready.
 func setupClientTest(t *testing.T) func(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	server.registry.Add(Service{Name: "service", Host: "host"})
 	go server.ListenAndServe()
 	timestamp := time.Now()
 	for time.Since(timestamp) > 5*time.Second {
-		_, err := net.DialTimeout("tcp", "localhost:64646", 10*time.Millisecond)
+		_, err := net.DialTimeout("tcp", "http://localhost:64646", 10*time.Millisecond)
 		if err == nil {
 			break
+		} else {
+			fmt.Println(err.Error())
 		}
 	}
 	return func(t *testing.T) {
@@ -55,7 +61,7 @@ func setupClientTest(t *testing.T) func(t *testing.T) {
 func TestClientDiscover(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
+	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return
@@ -76,7 +82,7 @@ func TestClientDiscover(t *testing.T) {
 func TestClientList(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
+	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return

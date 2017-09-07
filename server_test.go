@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,6 +40,7 @@ import (
 
 // TestHandleDiscover405 tests the discover endpoint with a bad method.
 func TestHandleDiscover405(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/discover", nil)
 	if err != nil {
@@ -56,6 +58,7 @@ func TestHandleDiscover405(t *testing.T) {
 
 // TestHandleDiscover401 tests the discover endpoint with bad auth.
 func TestHandleDiscover401(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	auth := func(token string) bool {
 		return false
 	}
@@ -76,6 +79,7 @@ func TestHandleDiscover401(t *testing.T) {
 
 // TestHandleDiscover400 tests the discover endpoint with a bad request.
 func TestHandleDiscover400(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	if err != nil {
@@ -93,6 +97,7 @@ func TestHandleDiscover400(t *testing.T) {
 
 // TestHandleDiscover404 tests the discover endpoint with a nonexistant service.
 func TestHandleDiscover404(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	query := req.URL.Query()
@@ -134,6 +139,7 @@ func TestHandleDiscover200(t *testing.T) {
 
 // TestHandleList405 tests the list endpoint with a bad method.
 func TestHandleList405(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/list", nil)
 	if err != nil {
@@ -151,6 +157,7 @@ func TestHandleList405(t *testing.T) {
 
 // TestHandleList401 tests the list endpoint with bad auth.
 func TestHandleList401(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	auth := func(token string) bool {
 		return false
 	}
@@ -215,6 +222,7 @@ func TestHandleList200(t *testing.T) {
 
 // TestHandleRegister405 tests the register endpoint with a bad method.
 func TestHandleRegister405(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/register", nil)
 	if err != nil {
@@ -232,6 +240,7 @@ func TestHandleRegister405(t *testing.T) {
 
 // TestHandleRegister401 tests the register endpoint with bad auth.
 func TestHandleRegister401(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	auth := func(token string) bool {
 		return false
 	}
@@ -252,6 +261,7 @@ func TestHandleRegister401(t *testing.T) {
 
 // TestHandleRegister400 tests the register endpoint with a bad request.
 func TestHandleRegister400(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/register", nil)
 	if err != nil {
@@ -296,6 +306,7 @@ func TestHandleRegister200(t *testing.T) {
 
 // TestHandleDeregister405 tests the deregister endpoint with a bad method.
 func TestHandleDeregister405(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/deregister", nil)
 	if err != nil {
@@ -313,6 +324,7 @@ func TestHandleDeregister405(t *testing.T) {
 
 // TestHandleDeregister401 tests the deregister endpoint with bad auth.
 func TestHandleDeregister401(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	auth := func(token string) bool {
 		return false
 	}
@@ -333,6 +345,7 @@ func TestHandleDeregister401(t *testing.T) {
 
 // TestHandleDeregister400 tests the deregister endpoint with a bad request.
 func TestHandleDeregister400(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("DELETE", "/deregister", nil)
 	if err != nil {
