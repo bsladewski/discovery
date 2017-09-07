@@ -31,6 +31,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -63,7 +64,7 @@ func (client *Client) Discover(name string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return "", fmt.Errorf(string(body))
+		return "", errors.New(string(body))
 	}
 	service := Service{}
 	decoder := json.NewDecoder(resp.Body)
@@ -92,7 +93,7 @@ func (client *Client) List(name string) ([]Service, error) {
 		if err != nil {
 			return []Service{}, err
 		}
-		return []Service{}, fmt.Errorf(string(body))
+		return []Service{}, errors.New(string(body))
 	}
 	services := struct {
 		Services []Service `json:"services"`
@@ -116,11 +117,7 @@ func (client *Client) Ping() error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf(string(body))
+		return errors.New("failed to connect to target host")
 	}
 	return nil
 }
@@ -136,7 +133,7 @@ func NewClient(host, token string, timeout time.Duration) (*Client, error) {
 	}
 	err := client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+		return nil, err
 	}
 	return client, nil
 }
@@ -172,7 +169,7 @@ func NewTLSClient(host, token, certFile string,
 	}
 	err = client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+		return nil, err
 	}
 	return client, nil
 }

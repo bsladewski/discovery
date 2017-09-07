@@ -29,31 +29,117 @@ package discovery
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
+	"net/http"
 	"testing"
 	"time"
 )
 
-// setupClientTest starts a test server and waits for it to be ready.
+// handleMockSuccess mocks a simple success response.
+func handleMockSuccess(w http.ResponseWriter, r *http.Request) {}
+
+// hanldeMockError mocks a simple error response.
+func handleMockError(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "test error response", http.StatusInternalServerError)
+}
+
+// handleMockService mocks response that returns a service.
+func handleMockService(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"service": {"name": "testName", "host": "testHost"}}`))
+}
+
+// handleMockServiceInvalid mocks response that returns a service.
+func handleMockServiceInvalid(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"service": {"name": testName", "host": "testHost"}}`))
+}
+
+// handleMockServiceList mocks response that returns a service list.
+func handleMockServiceList(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"services":[]}`))
+}
+
+// handleMockServiceListInvalid mocks response that returns a service list.
+func handleMockServiceListInvalid(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(`{"services":]}`))
+}
+
+// getMockSuccessMux gets a mux that mocks success responses.
+func getMockSuccessMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/register", handleMockSuccess)
+	mux.HandleFunc("/deregister", handleMockSuccess)
+	mux.HandleFunc("/discover", handleMockService)
+	mux.HandleFunc("/list", handleMockServiceList)
+	mux.HandleFunc("/ping", handleMockSuccess)
+	return mux
+}
+
+// getMockErrorMux gets a mux that mocks error responses.
+func getMockErrorMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/register", handleMockError)
+	mux.HandleFunc("/deregister", handleMockError)
+	mux.HandleFunc("/discover", handleMockError)
+	mux.HandleFunc("/list", handleMockError)
+	mux.HandleFunc("/ping", handleMockSuccess)
+	return mux
+}
+
+// getMockInvalidMux gets a mux that mocks invalid responses.
+func getMockInvalidMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/register", handleMockError)
+	mux.HandleFunc("/deregister", handleMockError)
+	mux.HandleFunc("/discover", handleMockServiceInvalid)
+	mux.HandleFunc("/list", handleMockServiceListInvalid)
+	mux.HandleFunc("/ping", handleMockSuccess)
+	return mux
+}
+
+// setupClientTest starts test servers representing different server responses.
 func setupClientTest(t *testing.T) func(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
-	server := NewRandomServer(64646, NullAuthenticator)
-	server.registry.Add(Service{Name: "service", Host: "host"})
-	go server.ListenAndServe()
-	timestamp := time.Now()
-	for time.Since(timestamp) > 5*time.Second {
-		_, err := net.DialTimeout("tcp", "http://localhost:64646", 10*time.Millisecond)
-		if err == nil {
-			break
-		} else {
-			fmt.Println(err.Error())
-		}
-	}
+	successMux := getMockSuccessMux()
+	errorMux := getMockErrorMux()
+	invalidMux := getMockInvalidMux()
+	successMock := &http.Server{Addr: "localhost:64646", Handler: successMux}
+	errorMock := &http.Server{Addr: "localhost:46464", Handler: errorMux}
+	invalidMock := &http.Server{Addr: "localhost:47474", Handler: invalidMux}
+	go successMock.ListenAndServe()
+	go errorMock.ListenAndServe()
+	go invalidMock.ListenAndServe()
 	return func(t *testing.T) {
-		server.Shutdown(context.Background())
+		successMock.Shutdown(context.Background())
+		errorMock.Shutdown(context.Background())
+		invalidMock.Shutdown(context.Background())
+	}
+}
+
+// setupClientTLSTest starts a test tls server and waits for it to be ready.
+func setupClientTLSTest(t *testing.T) func(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
+	successMux := getMockSuccessMux()
+	successMock := &http.Server{Addr: "localhost:64646", Handler: successMux}
+	go successMock.ListenAndServeTLS("test.crt", "test.key")
+	return func(t *testing.T) {
+		successMock.Shutdown(context.Background())
+	}
+}
+
+// TestClientTLS tests constructing a TLS client and registry client.
+func TestClientTLS(t *testing.T) {
+	teardown := setupClientTLSTest(t)
+	defer teardown(t)
+	_, err := NewTLSClient("https://localhost:64646", "", "test.crt", false,
+		5*time.Second)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+	_, err = NewTLSRegistryClient("", "", "https://localhost:64646", "",
+		"test.crt", false, 5*time.Second)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
 	}
 }
 
@@ -61,36 +147,71 @@ func setupClientTest(t *testing.T) func(t *testing.T) {
 func TestClientDiscover(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
-	if err != nil {
-		t.Errorf("failed to create client: %s", err.Error())
-		return
+	table := []struct {
+		target  string // target server host
+		create  bool   // whether the client should be able to instantiate.
+		success bool   // whether the client calls should return success.
+	}{
+		{"http://localhost:64646", true, true},   // success mock
+		{"http://localhost:46464", true, false},  // error mock
+		{"http://localhost:47474", true, false},  // invalid mock
+		{"http://localhost:53535", false, false}, // invalid target
 	}
-	_, err = client.Discover("service")
-	if err != nil {
-		t.Errorf("failed to get service: %s", err.Error())
-		return
-	}
-	_, err = client.Discover("invalid")
-	if err == nil {
-		t.Errorf("failed to get service: %s", err.Error())
-		return
+	for _, row := range table {
+		// construct client
+		client, err := NewClient(row.target, "", time.Second)
+		if err != nil && row.create {
+			t.Fatalf("failed to create client: %v", err)
+		} else if err == nil && !row.create {
+			t.Fatalf("expected failure to create client")
+		}
+		// if construct client is expected to fail, continue
+		if !row.create {
+			continue
+		}
+		// test discover function
+		_, err = client.Discover("")
+		if err != nil && row.success {
+			t.Fatalf("expected return success: %v", err)
+		} else if err == nil && !row.success {
+			t.Fatalf("expected return failure")
+		}
 	}
 }
 
-// TestClientDiscover tests calling the list endpoint with a client.
+// TestClientList tests calling the list endpoint with a client.
 func TestClientList(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewClient("http://localhost:64646", "", 10*time.Second)
-	if err != nil {
-		t.Errorf("failed to create client: %s", err.Error())
-		return
+	table := []struct {
+		target  string // target server host
+		create  bool   // whether the client should be able to instantiate.
+		success bool   // whether the client calls should return success.
+	}{
+		{"http://localhost:64646", true, true},   // success mock
+		{"http://localhost:46464", true, false},  // error mock
+		{"http://localhost:47474", true, false},  // invalid mock
+		{"http://localhost:53535", false, false}, // invalid target
 	}
-	_, err = client.List("service")
-	if err != nil {
-		t.Errorf("failed to get service: %s", err.Error())
-		return
+	for _, row := range table {
+		// construct client
+		client, err := NewClient(row.target, "", time.Second)
+		if err != nil && row.create {
+			t.Fatalf("failed to create client: %v", err)
+		} else if err == nil && !row.create {
+			t.Fatalf("expected failure to create client")
+		}
+		// if construct client is expected to fail, continue
+		if !row.create {
+			continue
+		}
+		// test list function
+		_, err = client.List("")
+		if err != nil && row.success {
+			t.Fatalf("expected return success: %v", err)
+		} else if err == nil && !row.success {
+			t.Fatalf("expected return failure")
+		}
 	}
 }
 
@@ -99,16 +220,35 @@ func TestClientList(t *testing.T) {
 func TestClientRegister(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewRegistryClient("service", "hostName",
-		"http://localhost:64646", "", 10*time.Second)
-	if err != nil {
-		t.Errorf("failed to create client: %s", err.Error())
-		return
+	table := []struct {
+		target  string // target server host
+		create  bool   // whether the client should be able to instantiate.
+		success bool   // whether the client calls should return success.
+	}{
+		{"http://localhost:64646", true, true},   // success mock
+		{"http://localhost:46464", true, false},  // error mock
+		{"http://localhost:47474", true, false},  // invalid mock
+		{"http://localhost:53535", false, false}, // invalid target
 	}
-	err = client.Register()
-	if err != nil {
-		t.Errorf("failed to register service: %s", err.Error())
-		return
+	for _, row := range table {
+		// construct client
+		client, err := NewRegistryClient("", "", row.target, "", time.Second)
+		if err != nil && row.create {
+			t.Fatalf("failed to create client: %v", err)
+		} else if err == nil && !row.create {
+			t.Fatalf("expected failure to create client")
+		}
+		// if construct client is expected to fail, continue
+		if !row.create {
+			continue
+		}
+		// test register function
+		err = client.Register()
+		if err != nil && row.success {
+			t.Fatalf("expected return success: %v", err)
+		} else if err == nil && !row.success {
+			t.Fatalf("expected return failure")
+		}
 	}
 }
 
@@ -117,16 +257,35 @@ func TestClientRegister(t *testing.T) {
 func TestClientDeregister(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewRegistryClient("service", "hostName",
-		"http://localhost:64646", "", 10*time.Second)
-	if err != nil {
-		t.Errorf("failed to create client: %s", err.Error())
-		return
+	table := []struct {
+		target  string // target server host
+		create  bool   // whether the client should be able to instantiate.
+		success bool   // whether the client calls should return success.
+	}{
+		{"http://localhost:64646", true, true},   // success mock
+		{"http://localhost:46464", true, false},  // error mock
+		{"http://localhost:47474", true, false},  // invalid mock
+		{"http://localhost:53535", false, false}, // invalid target
 	}
-	err = client.Deregister()
-	if err != nil {
-		t.Errorf("failed to register service: %s", err.Error())
-		return
+	for _, row := range table {
+		// construct client
+		client, err := NewRegistryClient("", "", row.target, "", time.Second)
+		if err != nil && row.create {
+			t.Fatalf("failed to create client: %v", err)
+		} else if err == nil && !row.create {
+			t.Fatalf("expected failure to create client")
+		}
+		// if construct client is expected to fail, continue
+		if !row.create {
+			continue
+		}
+		// test deregister function
+		err = client.Deregister()
+		if err != nil && row.success {
+			t.Fatalf("expected return success: %v", err)
+		} else if err == nil && !row.success {
+			t.Fatalf("expected return failure")
+		}
 	}
 }
 
@@ -134,22 +293,22 @@ func TestClientDeregister(t *testing.T) {
 func TestClientAuto(t *testing.T) {
 	teardown := setupClientTest(t)
 	defer teardown(t)
-	client, err := NewRegistryClient("service", "hostName",
-		"http://localhost:64646", "", 10*time.Second)
+	// construct client
+	client, err := NewRegistryClient("", "", "http://localhost:64646", "",
+		time.Second)
 	if err != nil {
-		t.Errorf("failed to create client: %s", err.Error())
-		return
+		t.Fatalf("failed to create client: %v", err)
 	}
+	// begin automatic registration
 	client.Auto(10 * time.Millisecond)
-	time.Sleep(50 * time.Millisecond)
-	err = client.Deregister()
-	if err != nil {
-		t.Errorf("failed to register service: %s", err.Error())
-		return
+	time.Sleep(20 * time.Millisecond)
+	if !client.IsRunning() {
+		t.Fatal("expected client to be running.")
 	}
-	time.Sleep(50 * time.Millisecond)
+	// end automatic registration
+	client.Deregister()
+	time.Sleep(20 * time.Millisecond)
 	if client.IsRunning() {
-		t.Errorf("client still running")
-		return
+		t.Fatal("expected client to be stopped.")
 	}
 }

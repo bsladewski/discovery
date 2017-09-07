@@ -180,7 +180,7 @@ func NewRegistryClient(name, host, targetHost, targetToken string,
 	}
 	err := client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+		return nil, err
 	}
 	return client, nil
 }
@@ -220,7 +220,7 @@ func NewTLSRegistryClient(name, host, targetHost, targetToken, certFile string,
 	}
 	err = client.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to server: %s", err.Error())
+		return nil, err
 	}
 	return client, nil
 }

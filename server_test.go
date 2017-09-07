@@ -44,15 +44,13 @@ func TestHandleDiscover405(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/discover", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
-		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
 	}
 }
 
@@ -65,15 +63,13 @@ func TestHandleDiscover401(t *testing.T) {
 	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
-		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusUnauthorized, status)
 	}
 }
 
@@ -83,15 +79,13 @@ func TestHandleDiscover400(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/discover", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("expected: %v, got: %v", http.StatusBadRequest, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusBadRequest, status)
 	}
 }
 
@@ -104,15 +98,13 @@ func TestHandleDiscover404(t *testing.T) {
 	query.Add("name", "nonexistant")
 	req.URL.RawQuery = query.Encode()
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusNotFound {
-		t.Errorf("expected: %v, got: %v", http.StatusNotFound, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusNotFound, status)
 	}
 }
 
@@ -125,15 +117,13 @@ func TestHandleDiscover200(t *testing.T) {
 	query.Add("name", "test_service")
 	req.URL.RawQuery = query.Encode()
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDiscover)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected: %v, got: %v", http.StatusOK, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusOK, status)
 	}
 }
 
@@ -143,15 +133,13 @@ func TestHandleList405(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/list", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
-		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
 	}
 }
 
@@ -164,15 +152,13 @@ func TestHandleList401(t *testing.T) {
 	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("GET", "/list", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
-		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusUnauthorized, status)
 	}
 }
 
@@ -191,32 +177,27 @@ func TestHandleList200(t *testing.T) {
 	query.Add("name", "service1")
 	req.URL.RawQuery = query.Encode()
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleList)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected: %v, got: %v", http.StatusOK, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusOK, status)
 	}
 	raw, err := ioutil.ReadAll(rr.Body)
 	if err != nil {
-		t.Errorf("failed to read response body: %s", err.Error())
-		return
+		t.Fatalf("failed to read response body: %s", err.Error())
 	}
 	resp := struct {
 		Services []Service `json:"services"`
 	}{}
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
-		t.Errorf("failed to parse json response: %s", err.Error())
-		return
+		t.Fatalf("failed to parse json response: %s", err.Error())
 	}
 	if length := len(resp.Services); length != 5 {
-		t.Errorf("expected length: %d, got: %d\n", 5, length)
-		return
+		t.Fatalf("expected length: %d, got: %d\n", 5, length)
 	}
 }
 
@@ -226,15 +207,13 @@ func TestHandleRegister405(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/register", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
-		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
 	}
 }
 
@@ -247,15 +226,13 @@ func TestHandleRegister401(t *testing.T) {
 	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("POST", "/register", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
-		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusUnauthorized, status)
 	}
 }
 
@@ -265,15 +242,13 @@ func TestHandleRegister400(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("POST", "/register", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("expected: %v, got: %v", http.StatusBadRequest, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusBadRequest, status)
 	}
 }
 
@@ -283,24 +258,20 @@ func TestHandleRegister200(t *testing.T) {
 	service := Service{Name: "service1", Host: "host1"}
 	raw, err := json.Marshal(service)
 	if err != nil {
-		t.Errorf("failed to create request body: %s", err.Error())
-		return
+		t.Fatalf("failed to create request body: %s", err.Error())
 	}
 	req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(raw))
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleRegister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected: %v, got: %v", http.StatusOK, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusOK, status)
 	}
 	if _, err := server.registry.Get(service.Name); err != nil {
-		t.Errorf("failed to retrieve registered service: %s", err.Error())
-		return
+		t.Fatalf("failed to retrieve registered service: %s", err.Error())
 	}
 }
 
@@ -310,15 +281,13 @@ func TestHandleDeregister405(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("GET", "/deregister", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDeregister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusMethodNotAllowed {
-		t.Errorf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusMethodNotAllowed, status)
 	}
 }
 
@@ -331,15 +300,13 @@ func TestHandleDeregister401(t *testing.T) {
 	server := NewRandomServer(64646, auth)
 	req, err := http.NewRequest("DELETE", "/deregister", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDeregister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusUnauthorized {
-		t.Errorf("expected: %v, got: %v", http.StatusUnauthorized, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusUnauthorized, status)
 	}
 }
 
@@ -349,15 +316,13 @@ func TestHandleDeregister400(t *testing.T) {
 	server := NewRandomServer(64646, NullAuthenticator)
 	req, err := http.NewRequest("DELETE", "/deregister", nil)
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDeregister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusBadRequest {
-		t.Errorf("expected: %v, got: %v", http.StatusBadRequest, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusBadRequest, status)
 	}
 }
 
@@ -368,23 +333,19 @@ func TestHandleDeregister200(t *testing.T) {
 	server.registry.Add(service)
 	raw, err := json.Marshal(service)
 	if err != nil {
-		t.Errorf("failed to create request body: %s", err.Error())
-		return
+		t.Fatalf("failed to create request body: %s", err.Error())
 	}
 	req, err := http.NewRequest("DELETE", "/deregister", bytes.NewBuffer(raw))
 	if err != nil {
-		t.Errorf("failed to create mock request: %s", err.Error())
-		return
+		t.Fatalf("failed to create mock request: %s", err.Error())
 	}
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(server.handleDeregister)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected: %v, got: %v", http.StatusOK, status)
-		return
+		t.Fatalf("expected: %v, got: %v", http.StatusOK, status)
 	}
 	if s, err := server.registry.Get(service.Name); err == nil {
-		t.Errorf("deregistered service found in registry: %v", s)
-		return
+		t.Fatalf("deregistered service found in registry: %v", s)
 	}
 }

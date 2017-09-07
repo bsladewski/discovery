@@ -62,9 +62,8 @@ func TestIndexOf(t *testing.T) {
 	}
 	for _, row := range table {
 		if idx := registry.indexOf(row.service); idx != row.expected {
-			t.Errorf("expected index: %d, got: %d; %v\n", row.expected, idx,
+			t.Fatalf("expected index: %d, got: %d; %v", row.expected, idx,
 				row)
-			return
 		}
 	}
 }
@@ -92,9 +91,8 @@ func TestGetAll(t *testing.T) {
 	for _, row := range table {
 		services := registry.getAll(row.name, row.inactive)
 		if length := len(services); length != row.expectedLen {
-			t.Errorf("expected: %d, got: %d; %v\n", row.expectedLen, length,
+			t.Fatalf("expected: %d, got: %d; %v", row.expectedLen, length,
 				row)
-			return
 		}
 	}
 }
@@ -108,12 +106,10 @@ func TestStale(t *testing.T) {
 	}
 	services := registry.getAll("", true)
 	if length := len(services); length > 0 {
-		t.Errorf("expected empty list, got length: %d\n", length)
-		return
+		t.Fatalf("expected empty list, got length: %d", length)
 	}
 	if length := len(registry.Services); length > 0 {
-		t.Errorf("expected empty registry, got length: %d\n", length)
-		return
+		t.Fatalf("expected empty registry, got length: %d", length)
 	}
 }
 
@@ -137,14 +133,12 @@ func TestAdd(t *testing.T) {
 	for _, row := range table {
 		registry.Add(row.service)
 		if length := len(registry.Services); length != row.expectedLen {
-			t.Errorf("expected length: %d, got: %d; %v\n", row.expectedLen,
+			t.Fatalf("expected length: %d, got: %d; %v", row.expectedLen,
 				length, row)
-			return
 		}
 		if idx := registry.indexOf(row.service); idx != row.expectedIdx {
-			t.Errorf("expected index: %d, got: %d; %v\n", row.expectedIdx, idx,
+			t.Fatalf("expected index: %d, got: %d; %v", row.expectedIdx, idx,
 				row)
-			return
 		}
 	}
 }
@@ -163,13 +157,11 @@ func TestRemove(t *testing.T) {
 	for _, row := range table {
 		registry.Remove(row.service)
 		if length := len(registry.Services); length != row.expectedLen {
-			t.Errorf("expected length: %d, got: %d; %v\n", row.expectedLen,
+			t.Fatalf("expected length: %d, got: %d; %v", row.expectedLen,
 				length, row)
-			return
 		}
 		if idx := registry.indexOf(row.service); idx != -1 {
-			t.Errorf("expected index: -1, got: %d; %v\n", idx, row)
-			return
+			t.Fatalf("expected index: -1, got: %d; %v", idx, row)
 		}
 	}
 }
@@ -187,12 +179,10 @@ func TestGet(t *testing.T) {
 	for _, row := range table {
 		service, err := registry.Get(row.name)
 		if !row.expectedErr && service.Name != row.name {
-			t.Errorf("expected: %s, got: %s; %v\n", row.name, service.Name, row)
-			return
+			t.Fatalf("expected: %s, got: %s; %v", row.name, service.Name, row)
 		}
 		if row.expectedErr && err == nil {
-			t.Errorf("expected error, got nil; %v\n", row)
-			return
+			t.Fatalf("expected error, got nil; %v", row)
 		}
 	}
 }
@@ -217,9 +207,8 @@ func TestList(t *testing.T) {
 	for _, row := range table {
 		services := registry.List(row.name)
 		if length := len(services); length != row.expectedLen {
-			t.Errorf("expected: %d, got: %d; %v\n", row.expectedLen, length,
+			t.Fatalf("expected: %d, got: %d; %v", row.expectedLen, length,
 				row)
-			return
 		}
 	}
 }
@@ -233,14 +222,12 @@ func TestSetTimeout(t *testing.T) {
 	}
 	services := registry.getAll("", false)
 	if length := len(services); length != 25 {
-		t.Errorf("failed to propagate registry, got length: %d\n", length)
-		return
+		t.Fatalf("failed to propagate registry, got length: %d", length)
 	}
 	registry.SetTimeout(6 * time.Hour)
 	services = registry.getAll("", false)
 	if length := len(services); length != 0 {
-		t.Errorf("expected empty list, got length: %d\n", length)
-		return
+		t.Fatalf("expected empty list, got length: %d\n", length)
 	}
 }
 
@@ -253,13 +240,11 @@ func TestSetKeep(t *testing.T) {
 	}
 	registry.getAll("", false)
 	if length := len(registry.Services); length != 25 {
-		t.Errorf("failed to propagate registry, got length: %d\n", length)
-		return
+		t.Fatalf("failed to propagate registry, got length: %d", length)
 	}
 	registry.SetKeep(14 * time.Hour)
 	registry.getAll("", false)
 	if length := len(registry.Services); length != 0 {
-		t.Errorf("expected empty list, got length: %d\n", length)
-		return
+		t.Fatalf("expected empty list, got length: %d", length)
 	}
 }
