@@ -29,56 +29,121 @@ package discovery
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"testing"
 	"time"
 )
 
+// setupClientTest starts a test server and waits for it to be ready.
+func setupClientTest(t *testing.T) func(t *testing.T) {
+	server := NewRandomServer(64646, NullAuthenticator)
+	server.registry.Add(Service{Name: "service", Host: "host"})
+	go server.ListenAndServe()
+	timestamp := time.Now()
+	for time.Since(timestamp) > 5*time.Second {
+		_, err := net.DialTimeout("tcp", "localhost:64646", 10*time.Millisecond)
+		if err == nil {
+			break
+		}
+	}
+	return func(t *testing.T) {
+		server.Shutdown(context.Background())
+	}
+}
+
 // TestClientDiscover tests calling the discovery endpoint with a client.
 func TestClientDiscover(t *testing.T) {
-	server := NewRandomServer(53535, NullAuthenticator)
-	server.registry.Add(Service{Name: "service", Host: "hostName"})
-	go server.ListenAndServe()
-	defer server.Shutdown(context.Background())
+	teardown := setupClientTest(t)
+	defer teardown(t)
 	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return
 	}
-	host, err := client.Discover("service")
+	_, err = client.Discover("service")
 	if err != nil {
 		t.Errorf("failed to get service: %s", err.Error())
 		return
 	}
-	if host != "hostName" {
-		t.Errorf("expected: hostName, got: %s", host)
+	_, err = client.Discover("invalid")
+	if err == nil {
+		t.Errorf("failed to get service: %s", err.Error())
 		return
 	}
 }
 
 // TestClientDiscover tests calling the list endpoint with a client.
 func TestClientList(t *testing.T) {
-	server := NewRandomServer(53535, NullAuthenticator)
-	for i := 1; i <= 5; i++ {
-		server.registry.Add(Service{
-			Name: "service",
-			Host: fmt.Sprintf("hostName%d", i),
-		})
-	}
-	go server.ListenAndServe()
-	defer server.Shutdown(context.Background())
+	teardown := setupClientTest(t)
+	defer teardown(t)
 	client, err := NewClient("http://localhost:53535", "", 10*time.Second)
 	if err != nil {
 		t.Errorf("failed to create client: %s", err.Error())
 		return
 	}
-	services, err := client.List("service")
+	_, err = client.List("service")
 	if err != nil {
 		t.Errorf("failed to get service: %s", err.Error())
 		return
 	}
-	if length := len(services); length != 5 {
-		t.Errorf("expected: 5, got: %d", length)
+}
+
+// TestClientRegister tests calling the register endpoint with a registry
+// client.
+func TestClientRegister(t *testing.T) {
+	teardown := setupClientTest(t)
+	defer teardown(t)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	err = client.Register()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+}
+
+// TestClientDeregister tests calling the deregister endpoint with a registry
+// client.
+func TestClientDeregister(t *testing.T) {
+	teardown := setupClientTest(t)
+	defer teardown(t)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	err = client.Deregister()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+}
+
+// TestClientAuto tests automatic registration with a registry client.
+func TestClientAuto(t *testing.T) {
+	teardown := setupClientTest(t)
+	defer teardown(t)
+	client, err := NewRegistryClient("service", "hostName",
+		"http://localhost:64646", "", 10*time.Second)
+	if err != nil {
+		t.Errorf("failed to create client: %s", err.Error())
+		return
+	}
+	client.Auto(10 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
+	err = client.Deregister()
+	if err != nil {
+		t.Errorf("failed to register service: %s", err.Error())
+		return
+	}
+	time.Sleep(50 * time.Millisecond)
+	if client.IsRunning() {
+		t.Errorf("client still running")
 		return
 	}
 }
