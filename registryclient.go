@@ -55,8 +55,8 @@ type RegistryClient struct {
 // setRunning thread-safe way of setting the running state of this client.
 func (client *RegistryClient) setRunning(running bool) {
 	client.mutex.Lock()
+	defer client.mutex.Unlock()
 	client.running = running
-	client.mutex.Unlock()
 }
 
 // IsRunning thread-safe way to check the running state of this client.

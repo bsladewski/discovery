@@ -81,21 +81,21 @@ func (r *randomRegistry) getAll(name string, inactive bool) []Service {
 
 func (r *randomRegistry) Add(service Service) {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if idx := r.indexOf(service); idx >= 0 {
 		r.Services[idx].Added = time.Now()
 	} else {
 		service.Added = time.Now()
 		r.Services = append(r.Services, service)
 	}
-	r.mutex.Unlock()
 }
 
 func (r *randomRegistry) Remove(service Service) {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if idx := r.indexOf(service); idx >= 0 {
 		r.Services = append(r.Services[:idx], r.Services[idx+1:]...)
 	}
-	r.mutex.Unlock()
 }
 
 func (r *randomRegistry) Get(name string) (Service, error) {
@@ -112,14 +112,14 @@ func (r *randomRegistry) List(name string) []Service {
 
 func (r *randomRegistry) SetTimeout(timeout time.Duration) {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.Timeout = timeout
-	r.mutex.Unlock()
 }
 
 func (r *randomRegistry) SetKeep(keep time.Duration) {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.Keep = keep
-	r.mutex.Unlock()
 }
 
 // NewRandomRegistry creates a Registry that load balances by selecting a
